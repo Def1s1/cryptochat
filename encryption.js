@@ -25,13 +25,13 @@
       return crypto.randomBytes(16);
     },
     key: function(secret, salt) {
-      return crypto.pbkdf2Sync(secret, salt, 4096, 32);
+      return crypto.pbkdf2Sync(secret, salt, 1000, 32, 'sha256');
     },
     hex2bytes: function(hex) {
       if(hex.length % 2 !== 0)
         throw new Error(hex + ' is not a valid hex string');
 
-      var bytes = new Buffer(hex.length / 2);
+      var bytes = Buffer.alloc(hex.length / 2);
       for(var i = 0; i < hex.length; i += 2) {
         bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
       }

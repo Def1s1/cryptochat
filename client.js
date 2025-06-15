@@ -18,11 +18,22 @@
         socket = raw.createSocket({
           protocol: raw.Protocol.ICMP
         });
+    
+    console.log('CryptoChat Client started.');
+    console.log('Type your message and press Enter:');
+    
 
     process.stdin.setEncoding('utf8');
     process.stdin.on('data', send);
+    process.stdin.resume();
 
     function send(msg) {
+      console.log('[RAW INPUT]', msg);
+      msg = msg.trim();
+      if(!msg) {
+        console.log('Empty message. Nothing was sent. ');
+        return;
+      }
       var payloads = msg.match(/.{1,31}/g),
           packets = [],
           payload,
@@ -64,7 +75,7 @@
       while(message.length < 64)
         message += 'f';
 
-      var buffer = new Buffer(40);
+      var buffer = Buffer.alloc(84);
       buffer[0] = 0x08; // type
       buffer[1] = 0x00; // code
       buffer[2] = 0x00; // checksum placeholder
@@ -75,6 +86,7 @@
       buffer[7] = 0x09; // seqnum
       buffer.write(message, 8, 'hex');
       raw.writeChecksum(buffer, 2, raw.createChecksum(buffer));
+      
 
       return buffer;
     }

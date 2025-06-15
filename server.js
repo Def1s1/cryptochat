@@ -3,7 +3,7 @@
   module.exports = function(key) {
     require('terminal-colors');
 
-    var DEBUG = false;
+    var DEBUG = true;
     var raw = require('raw-socket'),
         crypto = require('./encryption.js'),
         socket = raw.createSocket({
@@ -23,6 +23,8 @@
     socket.on('message', listen);
     function listen(buffer, source) {
       // convert buffer to hex string, ignore IP header (20 bytes)
+      console.log('[RECEIVED] from:', source);
+      console.log('[RAW BUFFER]', buffer.toString('hex'));
       buffer = buffer.toString('hex', 20, buffer.length);
 
       /**
@@ -76,5 +78,9 @@
       message += crypto.decrypt(hex, derivedKey, iv);
       count++;
     }
+
+    console.log('CryptoChat Server started. Listening for ICMP messages...');
+    process.stdin.resume();
   };
 }());
+

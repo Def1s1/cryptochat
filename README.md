@@ -1,101 +1,158 @@
-# cryptochat
+# CryptoChat (ICMP + AES-256-CTR)
 
-[![npm](https://img.shields.io/npm/dm/cryptochat.svg?style=flat-square)]()
+🔐 Encrypted peer-to-peer chat over ICMP (ping), using AES-256-CTR encryption and PBKDF2 with SHA-256.
 
-[Encrypted](https://github.com/mateogianolio/cryptochat/blob/master/encryption.js) P2P chat over ICMP ([**I**nternet **C**ontrol **M**essage **P**rotocol](https://en.wikipedia.org/wiki/Internet_Control_Message_Protocol)).
+> Updated for modern Node.js (v16+), uses raw sockets and requires `sudo`.
 
-I strongly advise you to pick a high-entropy encryption key to avoid the possibility of brute-force attacks.
+---
 
-Uses [raw-socket](http://npmjs.org/package/raw-socket) for ICMP handling and [terminal-colors](https://github.com/tinganho/terminal-colors) to spice it up a bit.
+## ⚠️ Requirements
 
-### Install and usage
+- Two **separate** devices (ICMP over `127.0.0.1` will NOT work properly)
+- Node.js **v16 or higher**
+- Linux or macOS (must support raw sockets)
+- Must run as `sudo` (root privileges needed)
 
-Make sure you have node ```0.10.x``` (*tip:* use [n](https://www.npmjs.com/package/n)) and then install the package globally with ```sudo```.
+---
 
-```bash
-sudo npm install -g cryptochat
-```
-
-Three variants of cryptochat are available depending on your use case:
-
-* **Send** and **receive** messages
-  ```bash
-  $ sudo cryptochat <ip> <encryption_key>
-  ```
-
-* **Receive** messages
-  ```bash
-  $ sudo cryptochat server <encryption_key>
-  ```
-
-* **Send** messages
-  ```bash
-  $ sudo cryptochat client <ip> <encryption_key>
-  ```
-
-Because it relies on ```stdin``` for input, it is possible to use pipes to send data:
+## 📦 Installation
 
 ```bash
-cat cryptochat.js | sudo cryptochat client <ip> <encryption_key>
+git clone https://github.com/your-username/cryptochat
+cd cryptochat
+npm install
 ```
 
-### [ICMP Echo request](https://en.wikipedia.org/wiki/Ping_(networking_utility)) format
+Or install globally:
 
-<table>
-  <tr>
-    <td><b>bits 0-7</b></td>
-    <td><b>bits 8-15</b></td>
-    <td><b>bits 16-31</b></td>
-  </tr>
-  <tr>
-    <td>type = <code>0x08</code></td>
-    <td>code = <code>0x00</code></td>
-    <td>checksum</td>
-  </tr>
-  <tr>
-    <td colspan="2">identifier</td>
-    <td>sequence number</td>
-  </tr>
-  <tr>
-    <td colspan="3">payload</td>
-  </tr>
-</table>
+```bash
+sudo npm install -g .
+```
 
-The message data is attached as the ICMP payload.
+---
 
-### Message
-Messages are piped from ```stdin``` and split into payload packages, which are encrypted and sent as ICMP Echo requests. The payload size per request is currently set to 32 bytes. The first byte is the length of the message and the rest is the message itself.
+## 🚀 Usage
 
-The first request contains a salt and an initialization vector needed to decrypt the payloads.
+### 🟢 Receive messages (Server)
 
-<table>
-  <tr>
-    <td><b>byte 0</b></td>
-    <td><b>bytes 1-15</b></td>
-    <td><b>bytes 16-31</b></td>
-  </tr>
-  <tr>
-    <td><code>0x3e</code></td>
-    <td>salt</td>
-    <td>initialization vector</td>
-  </tr>
-</table>
+Run on device A (receiver):
 
-An "end" request is sent in order for the receiver to know when a message is completed. The end request has the following format:
+```bash
+sudo node cryptochat.js server <encryption_key>
+```
 
-<table>
-  <tr>
-    <td><b>byte 0</b></td>
-    <td><b>bytes 1-31</b></td>
-  </tr>
-  <tr>
-    <td><code>0x3e</code></td>
-    <td><code>0xffffffff...</code></td>
-  </tr>
-</table>
+Example:
 
-When the end request is received, the full message is printed to the screen.
+```bash
+sudo node cryptochat.js server mySecretKey
+```
 
-### Contribute
+---
 
-As always, contributions are much appreciated.
+### 🔵 Send messages (Client)
+
+Run on device B (sender):
+
+```bash
+sudo node cryptochat.js client <target_ip> <encryption_key>
+```
+
+Example:
+
+```bash
+sudo node cryptochat.js client 192.168.0.42 mySecretKey
+```
+
+Type your message and press **Enter** to send.
+
+---
+
+## 🛠 How It Works
+
+- Messages are encrypted using `AES-256-CTR`
+- Key is derived using PBKDF2 with `SHA-256`
+- Each message is split into 31-byte encrypted chunks
+- Sent inside **ICMP Echo Request** packets
+- Receiver listens, decrypts, and prints the message
+
+### First Packet (Initialization)
+
+| Byte        | Content              |
+|-------------|----------------------|
+| Byte 0      | `0x3e` marker         |
+| Bytes 1–15  | Salt (random)        |
+| Bytes 16–31 | IV (random)          |
+
+### Encrypted Chunks
+
+Each packet:
+- Starts with a length byte
+- Followed by encrypted content (max 31 bytes)
+
+### End Packet
+
+| Byte  | Content       |
+|-------|---------------|
+| 0     | `0x3e`        |
+| 1–31  | All `0xff`    |
+
+Marks the end of a message.
+
+---
+
+## 🧪 Example
+
+**On receiver device:**
+
+```bash
+sudo node cryptochat.js server testkey123
+```
+
+**On sender device:**
+
+```bash
+sudo node cryptochat.js client 192.168.1.25 testkey123
+```
+
+Now type and send messages!
+
+---
+
+## ❗ Notes
+
+- Does **not** work reliably on localhost (`127.0.0.1`)
+- Make sure ICMP is allowed through firewalls
+- Run both ends with the **same encryption key**
+
+---
+
+## 🔐 Security
+
+- Uses AES-256 in CTR mode
+- Keys derived with PBKDF2 (SHA-256, 1000 iterations)
+- No data is sent in plain text
+
+---
+
+## 🧠 Contributing
+
+Pull requests welcome!
+
+Ideas:
+- Optional TCP/UDP fallback
+- File transfer support
+- Web interface
+
+---
+
+## 📖 References
+
+- [AES-CTR Mode](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Counter_(CTR))
+- [ICMP Protocol](https://en.wikipedia.org/wiki/Internet_Control_Message_Protocol)
+- [raw-socket (npm)](https://www.npmjs.com/package/raw-socket)
+
+---
+
+## ⚠ Disclaimer
+
+This tool manipulates ICMP packets. Some networks may block or inspect them. Use at your own risk and only in safe environments.
